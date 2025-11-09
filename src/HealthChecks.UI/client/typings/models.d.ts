@@ -45,3 +45,25 @@ export interface UIApiSettings {
   pollingInterval: number;
   headerText: string;
 }
+
+export interface MemberHealthReport {
+  name: string;
+  uri: string;
+  status: string;
+  durationMs: number;
+  payload: string | null;
+}
+
+export interface ApplicationHealthReport {
+  name: string;
+  status: string;
+  healthyCount: number;
+  totalCount: number;
+  averageDurationMs: number;
+  checkedAt: string;
+  members: Array<MemberHealthReport>;
+}
+
+export interface ApplicationsHealthResponse {
+  applications: Array<ApplicationHealthReport>;
+}

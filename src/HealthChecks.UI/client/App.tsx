@@ -42,6 +42,14 @@ const App: FunctionComponent<AppProps> = ({ uiSettings }) => {
                     <span>Health Checks</span>
                 </NavLink>
                 <NavLink
+                    to="/applications"
+                    className="hc-aside-menu__item"
+                    activeClassName="hc-aside-menu__item--active"
+                >
+                    <img alt="icon heart check" className="hc-menu-icon" src={WhiteHeartIcon} />
+                    <span>Applications</span>
+                </NavLink>
+                <NavLink
                     to="/webhooks"
                     className="hc-aside-menu__item"
                     activeClassName="hc-aside-menu__item--active"

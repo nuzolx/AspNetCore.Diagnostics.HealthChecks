@@ -409,3 +409,225 @@
     gap: 0.5rem;
   }
 }
+
+/* Member Cards */
+.hc-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hc-member-card {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 4px solid;
+  transition: all 0.2s ease;
+}
+
+.hc-member-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.hc-member-card--healthy {
+  border-left-color: var(--grid-healthy);
+}
+
+.hc-member-card--unhealthy {
+  border-left-color: var(--grid-unhealthy);
+}
+
+.hc-member-card--degraded {
+  border-left-color: var(--grid-warning);
+}
+
+.hc-member-card--unreachable {
+  border-left-color: #6B7280;
+}
+
+.hc-member-card--unknown {
+  border-left-color: var(--grid-unknown);
+}
+
+.hc-member-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.hc-member-card__info {
+  flex: 1;
+}
+
+.hc-member-card__name {
+  font-weight: 600;
+  color: var(--grayColor);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hc-member-card__icon {
+  font-size: 1.25rem;
+}
+
+.hc-member-card__icon--healthy {
+  color: var(--grid-healthy);
+}
+
+.hc-member-card__icon--unhealthy {
+  color: var(--grid-unhealthy);
+}
+
+.hc-member-card__icon--degraded {
+  color: var(--grid-warning);
+}
+
+.hc-member-card__icon--unreachable {
+  color: #6B7280;
+}
+
+.hc-member-card__icon--unknown {
+  color: var(--grid-unknown);
+}
+
+.hc-member-card__status {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.hc-member-card__duration {
+  font-size: 0.875rem;
+  color: #999;
+}
+
+.hc-member-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hc-member-card__link,
+.hc-member-card__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.hc-member-card__link {
+  background: #f0f9ff;
+  color: #0284c7;
+}
+
+.hc-member-card__link:hover {
+  background: #e0f2fe;
+}
+
+.hc-member-card__button {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.hc-member-card__button:hover {
+  background: #e5e7eb;
+}
+
+.hc-member-card__link i,
+.hc-member-card__button i {
+  font-size: 1rem;
+}
+
+/* Status Badge */
+.hc-status-badge {
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hc-status-badge--healthy {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.hc-status-badge--unhealthy {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.hc-status-badge--degraded {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.hc-status-badge--unreachable {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.hc-status-badge--unknown {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Modal Variants */
+.hc-modal--large {
+  max-width: 1000px;
+}
+
+.hc-modal--payload {
+  max-width: 900px;
+}
+
+/* Payload Display */
+.hc-payload-text {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 60vh;
+  overflow-y: auto;
+  color: var(--grayColor);
+}
+
+/* Metrics styling for application cards */
+.hc-endpoint-card__metrics {
+  flex: 1;
+}
+
+/* Responsive adjustments for member cards */
+@media (max-width: 768px) {
+  .hc-member-card__header {
+    flex-direction: column;
+  }
+
+  .hc-member-card__actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .hc-member-card__link,
+  .hc-member-card__button {
+    flex: 1;
+    justify-content: center;
+  }
+}
