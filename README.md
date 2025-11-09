@@ -561,7 +561,104 @@ services
 
 You can also use relative URLs when using `IConfiguration` providers like appsettings.json.
 
-### Webhooks and Failure Notifications
+### Application Health Aggregation (Opt-in Server-Side Feature)
+
+HealthChecks UI supports grouping multiple health check endpoints into logical "applications" for aggregated health monitoring. This opt-in feature provides a server-side aggregator that:
+
+- Groups multiple health check endpoints by application name
+- Calls member endpoints in parallel with configurable timeout (default: 3 seconds)
+- Aggregates health status using simple rules: `Unhealthy` > `Degraded` > `Healthy` > `Unknown`
+- Exposes REST API endpoints to query aggregated application health
+
+#### Configuration
+
+Applications are defined in the `HealthChecksUI:Applications` configuration section. Each application references existing health check endpoints by their `Name` property:
+
+```json
+{
+  "HealthChecksUI": {
+    "HealthChecks": [
+      { "Name": "Sinbad", "Uri": "https://services.sbad.dev.bruneau.corp/healthz" },
+      { "Name": "Flowmanager - Front", "Uri": "https://api.flowmanager.front.dev.bruneau.corp/api/health" },
+      { "Name": "Flowmanager - Back", "Uri": "https://api.flowmanager.back.dev.bruneau.corp/api/health" },
+      { "Name": "Flowmanager - Other", "Uri": "https://api.flowmanager.other.dev.bruneau.corp/api/health" }
+    ],
+    "Applications": {
+      "Flowmanager": {
+        "Members": [
+          "Flowmanager - Front",
+          "Flowmanager - Back",
+          "Flowmanager - Other"
+        ]
+      },
+      "SinbadApp": {
+        "Members": [ "Sinbad" ]
+      }
+    }
+  }
+}
+```
+
+#### API Endpoints
+
+When `Applications` are configured, the following REST API endpoints become available:
+
+**GET** `/api/health/applications`  
+Returns all configured applications with their aggregated health status.
+
+**GET** `/api/health/applications/{name}`  
+Returns a specific application's health status, or 404 if the application doesn't exist.
+
+#### Response Format
+
+```json
+{
+  "name": "Flowmanager",
+  "status": "Healthy",
+  "healthyCount": 3,
+  "totalCount": 3,
+  "averageDurationMs": 125.5,
+  "checkedAt": "2025-11-09T16:45:30Z",
+  "members": [
+    {
+      "name": "Flowmanager - Front",
+      "uri": "https://api.flowmanager.front.dev.bruneau.corp/api/health",
+      "status": "Healthy",
+      "durationMs": 120,
+      "payload": "{\"status\":\"Healthy\"}"
+    },
+    {
+      "name": "Flowmanager - Back",
+      "uri": "https://api.flowmanager.back.dev.bruneau.corp/api/health",
+      "status": "Healthy",
+      "durationMs": 115,
+      "payload": "{\"status\":\"Healthy\"}"
+    }
+  ]
+}
+```
+
+#### Aggregation Rules
+
+The aggregation logic follows these simple rules:
+
+1. If any member is `Unhealthy` or `Unreachable` → Application status = `Unhealthy`
+2. Else if any member is `Degraded` → Application status = `Degraded`
+3. Else if at least one member is `Healthy` → Application status = `Healthy`
+4. Otherwise → Application status = `Unknown`
+
+**Status Detection**: The aggregator parses health check responses to extract status:
+- Looks for a `status` field in JSON response (case-insensitive)
+- Falls back to HTTP status code (200 = Healthy, others = Unhealthy)
+- Treats timeouts and network errors as `Unreachable`
+
+#### Backward Compatibility
+
+This feature is completely opt-in:
+- If no `Applications` section is configured, no changes to existing behavior
+- API endpoints are only registered when `Applications` are defined
+- All existing HealthChecks UI features continue to work unchanged
+
 
 If the **WebHooks** section is configured, HealthCheck-UI automatically posts a new notification into the webhook collection. HealthCheckUI uses a simple replace method for values in the webhook's **Payload** and **RestorePayload** properties. At this moment we support two bookmarks:
 
