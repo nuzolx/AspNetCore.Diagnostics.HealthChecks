@@ -1,4 +1,5 @@
 import "../assets/material.css";
+import "../assets/healthchecks-grid.css";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { App } from './App';
