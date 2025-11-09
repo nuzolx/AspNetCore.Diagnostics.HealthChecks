@@ -2,18 +2,19 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using HealthChecks.UI.Core;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HealthChecks.UI.Middleware;
 
 internal class ApplicationsApiMiddleware
 {
-    private readonly IApplicationHealthAggregator _aggregator;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
-    public ApplicationsApiMiddleware(RequestDelegate next, IApplicationHealthAggregator aggregator)
+    public ApplicationsApiMiddleware(RequestDelegate next, IServiceScopeFactory serviceScopeFactory)
     {
         _ = next;
-        _aggregator = aggregator ?? throw new ArgumentNullException(nameof(aggregator));
+        _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
         _jsonSerializerOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -27,6 +28,9 @@ internal class ApplicationsApiMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var aggregator = scope.ServiceProvider.GetRequiredService<IApplicationHealthAggregator>();
+
         var pathSegments = context.Request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
         
         // Check if there's an application name in the path
@@ -37,7 +41,7 @@ internal class ApplicationsApiMiddleware
         {
             // Specific application requested
             var applicationName = pathSegments[applicationsIndex + 1];
-            var report = await _aggregator.GetApplicationHealthAsync(applicationName, context.RequestAborted).ConfigureAwait(false);
+            var report = await aggregator.GetApplicationHealthAsync(applicationName, context.RequestAborted).ConfigureAwait(false);
             
             if (report == null)
             {
@@ -52,7 +56,7 @@ internal class ApplicationsApiMiddleware
         else
         {
             // All applications requested
-            var reports = await _aggregator.GetAllApplicationsHealthAsync(context.RequestAborted).ConfigureAwait(false);
+            var reports = await aggregator.GetAllApplicationsHealthAsync(context.RequestAborted).ConfigureAwait(false);
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsJsonAsync(reports, _jsonSerializerOptions).ConfigureAwait(false);
         }
