@@ -1,7 +1,10 @@
 import React, { FunctionComponent, useState } from 'react';
 import moment from 'moment';
-import { ApplicationHealthReport, MemberHealthReport } from '../typings/models';
+import { ApplicationHealthReport, MemberHealthReport, Liveness } from '../typings/models';
+import { EndpointDetailModal } from './EndpointDetailModal';
 import ReactJson from 'react-json-view';
+import { useQuery } from 'react-query';
+import { getHealthChecks } from '../api/fetchers';
 
 interface ApplicationDetailModalProps {
   application: ApplicationHealthReport;
@@ -13,6 +16,13 @@ const ApplicationDetailModal: FunctionComponent<ApplicationDetailModalProps> = (
   onClose,
 }) => {
   const [selectedMember, setSelectedMember] = useState<MemberHealthReport | null>(null);
+  const [selectedEndpoint, setSelectedEndpoint] = useState<Liveness | null>(null);
+
+  // Fetch health checks data to get full endpoint details
+  const { data: healthChecksData } = useQuery('healthchecks', getHealthChecks, {
+    retry: 1,
+    staleTime: 10000
+  });
 
   const getStatusClass = (status: string): string => {
     const statusLower = status.toLowerCase();
@@ -45,8 +55,22 @@ const ApplicationDetailModal: FunctionComponent<ApplicationDetailModalProps> = (
     setSelectedMember(member);
   };
 
+  const handleMemberDetailClick = (memberName: string) => {
+    // Find the full health check data for this member
+    if (healthChecksData) {
+      const endpoint = healthChecksData.find(hc => hc.name === memberName);
+      if (endpoint) {
+        setSelectedEndpoint(endpoint);
+      }
+    }
+  };
+
   const handleClosePayload = () => {
     setSelectedMember(null);
+  };
+
+  const handleCloseEndpointDetail = () => {
+    setSelectedEndpoint(null);
   };
 
   const parsePayload = (payload: string | null) => {
@@ -118,6 +142,13 @@ const ApplicationDetailModal: FunctionComponent<ApplicationDetailModalProps> = (
                             </div>
                           </div>
                           <div className="hc-member-card__actions">
+                            <button
+                              className="hc-member-card__button"
+                              onClick={() => handleMemberDetailClick(member.name)}
+                            >
+                              <i className="material-icons">info</i>
+                              View Details
+                            </button>
                             <a
                               href={member.uri}
                               target="_blank"
@@ -178,6 +209,13 @@ const ApplicationDetailModal: FunctionComponent<ApplicationDetailModalProps> = (
             </div>
           </div>
         </div>
+      )}
+
+      {selectedEndpoint && (
+        <EndpointDetailModal
+          endpoint={selectedEndpoint}
+          onClose={handleCloseEndpointDetail}
+        />
       )}
     </>
   );
