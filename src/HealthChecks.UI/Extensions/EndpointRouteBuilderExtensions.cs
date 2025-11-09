@@ -1,7 +1,9 @@
 using HealthChecks.UI;
+using HealthChecks.UI.Configuration;
 using HealthChecks.UI.Core;
 using HealthChecks.UI.Middleware;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Options = HealthChecks.UI.Configuration.Options;
 
 namespace Microsoft.AspNetCore.Builder;
@@ -48,6 +50,24 @@ public static class EndpointRouteBuilderExtensions
         var endpointConventionBuilders =
             new List<IEndpointConventionBuilder>(
                 new[] { apiEndpoint, webhooksEndpoint, settingsEndpoint }.Union(resourcesEndpoints));
+
+        // Add applications API endpoints if Applications are configured
+        var settings = builder.ServiceProvider.GetService<Microsoft.Extensions.Options.IOptions<Settings>>()?.Value;
+        if (settings?.Applications != null && settings.Applications.Count > 0)
+        {
+            var applicationsDelegate = builder.CreateApplicationBuilder()
+                .UseMiddleware<ApplicationsApiMiddleware>()
+                .Build();
+
+            var applicationsEndpoint = builder.MapGet("/api/health/applications/{**name}", applicationsDelegate)
+                .WithDisplayName("HealthChecks Applications API");
+
+            var applicationsListEndpoint = builder.Map("/api/health/applications", applicationsDelegate)
+                .WithDisplayName("HealthChecks Applications List API");
+
+            endpointConventionBuilders.Add(applicationsEndpoint);
+            endpointConventionBuilders.Add(applicationsListEndpoint);
+        }
 
         return new HealthCheckUIConventionBuilder(endpointConventionBuilders);
     }

@@ -9,6 +9,7 @@ public class Settings
     internal Func<List<HealthCheckExecution>, Task>? ConfigureUIApiEndpointResult { get; set; }
     internal List<HealthCheckSetting> HealthChecks { get; set; } = new List<HealthCheckSetting>();
     internal List<WebHookNotification> Webhooks { get; set; } = new List<WebHookNotification>();
+    internal Dictionary<string, ApplicationConfiguration> Applications { get; set; } = new Dictionary<string, ApplicationConfiguration>();
     internal bool DisableMigrations { get; set; } = false;
     internal int MaximumExecutionHistoriesPerEndpoint { get; private set; } = 100;
     internal int EvaluationTimeInSeconds { get; set; } = 10;
@@ -156,4 +157,9 @@ public class WebHookNotification
     internal Func<string, UIHealthReport, bool>? ShouldNotifyFunc { get; set; }
     internal Func<string, UIHealthReport, string>? CustomMessageFunc { get; set; }
     internal Func<string, UIHealthReport, string>? CustomDescriptionFunc { get; set; }
+}
+
+public class ApplicationConfiguration
+{
+    public List<string> Members { get; set; } = new List<string>();
 }

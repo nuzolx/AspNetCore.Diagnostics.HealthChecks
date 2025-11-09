@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ServerAddressesService>();
         services.TryAddScoped<IHealthCheckFailureNotifier, WebHookFailureNotifier>();
         services.TryAddScoped<IHealthCheckReportCollector, HealthCheckReportCollector>();
+        services.TryAddScoped<IApplicationHealthAggregator, ApplicationHealthAggregator>();
 
         services
             .AddHostedService<UIInitializationHostedService>()
