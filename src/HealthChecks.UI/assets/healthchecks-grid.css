@@ -10,13 +10,12 @@
 /* Grid Layout */
 .hc-grid-container {
   padding: 2rem;
-  max-width: 1400px;
   margin: 0 auto;
 }
 
 .hc-endpoint-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-top: 2rem;
 }
@@ -320,6 +319,7 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  margin-left: 1.5rem;
 }
 
 .hc-view-toggle__button {
