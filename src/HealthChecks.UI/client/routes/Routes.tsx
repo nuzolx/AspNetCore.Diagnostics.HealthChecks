@@ -2,6 +2,7 @@ import React, { FunctionComponent } from "react"
 import { Route, Redirect, Switch } from 'react-router-dom';
 import { LivenessPage } from '../pages/LivenessPage';
 import { LivenessGridPage } from '../pages/LivenessGridPage';
+import { ApplicationsPage } from '../pages/ApplicationsPage';
 import { WebhooksPage } from '../pages/WebhooksPage';
 import { UIApiSettings } from "../typings/models";
 
@@ -25,6 +26,10 @@ const Routes: FunctionComponent<RoutesProps> = ({apiSettings}) => {
             <Route
                 path="/healthchecks-grid"
                 render={() => <LivenessGridPage apiSettings={apiSettings} />}
+            />
+            <Route
+                path="/applications"
+                render={() => <ApplicationsPage apiSettings={apiSettings} />}
             />
             <Route
                 path="/webhooks"
