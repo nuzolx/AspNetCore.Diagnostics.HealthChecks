@@ -147,13 +147,14 @@ internal sealed class HealthCheckReportCollector : IHealthCheckReportCollector, 
                     return UIHealthReport.CreateFrom(new InvalidOperationException($"HTTP response is not in valid state ({response.StatusCode}) when trying to get report from {uri} configured with name {name}."));
 
                 var contentType = response.Content.Headers.ContentType?.MediaType;
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 
-                // Try to parse as JSON first
-                if (contentType == "application/json" || contentType == null)
+                // Try to parse as JSON first if content type is JSON or if content looks like JSON
+                if (contentType == "application/json" || (contentType == null && content?.TrimStart().StartsWith("{") == true))
                 {
                     try
                     {
-                        var jsonReport = await response.Content.ReadFromJsonAsync<UIHealthReport>(_options).ConfigureAwait(false);
+                        var jsonReport = JsonSerializer.Deserialize<UIHealthReport>(content, _options);
                         if (jsonReport != null)
                             return jsonReport;
                     }
@@ -164,8 +165,7 @@ internal sealed class HealthCheckReportCollector : IHealthCheckReportCollector, 
                 }
 
                 // Parse as simple text response
-                var textContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return ParseTextHealthReport(textContent?.Trim());
+                return ParseTextHealthReport(content?.Trim());
             }
         }
         catch (Exception exception)
@@ -203,8 +203,19 @@ internal sealed class HealthCheckReportCollector : IHealthCheckReportCollector, 
             return UIHealthReport.CreateFrom(new InvalidOperationException($"Unexpected health check response: {textContent}"));
         }
 
-        // Create a simple health report with the parsed status
-        return new UIHealthReport(new Dictionary<string, UIHealthReportEntry>(), TimeSpan.Zero)
+        // Create a simple health report with the parsed status and an entry indicating the source
+        var entries = new Dictionary<string, UIHealthReportEntry>
+        {
+            ["Text Response"] = new UIHealthReportEntry
+            {
+                Status = status,
+                Description = $"Health status from text response: {textContent}",
+                Duration = TimeSpan.Zero,
+                Data = new Dictionary<string, object>()
+            }
+        };
+
+        return new UIHealthReport(entries, TimeSpan.Zero)
         {
             Status = status
         };
