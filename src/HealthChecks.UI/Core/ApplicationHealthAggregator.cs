@@ -110,7 +110,8 @@ public class ApplicationHealthAggregator : IApplicationHealthAggregator
                 var trimmedContent = content.Trim();
                 
                 // Try to parse as JSON first if content type is JSON or if content looks like JSON
-                if (contentType == "application/json" || (contentType == null && trimmedContent.StartsWith("{")))
+                if (contentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true || 
+                    (contentType == null && trimmedContent.StartsWith("{") && trimmedContent.EndsWith("}")))
                 {
                     try
                     {

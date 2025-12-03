@@ -150,7 +150,8 @@ internal sealed class HealthCheckReportCollector : IHealthCheckReportCollector, 
                 var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 
                 // Try to parse as JSON first if content type is JSON or if content looks like JSON
-                if (contentType == "application/json" || (contentType == null && content?.TrimStart().StartsWith("{") == true))
+                if (contentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true || 
+                    (contentType == null && content?.TrimStart().StartsWith("{") == true && content?.TrimEnd().EndsWith("}") == true))
                 {
                     try
                     {
