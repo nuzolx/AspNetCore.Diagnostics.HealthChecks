@@ -103,34 +103,47 @@ public class ApplicationHealthAggregator : IApplicationHealthAggregator
             var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             report.Payload = content;
 
-            // Try to parse JSON and extract status
+            // Try to parse JSON and extract status, then fallback to plain text
             if (!string.IsNullOrWhiteSpace(content))
             {
-                try
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+                var trimmedContent = content.Trim();
+                
+                // Try to parse as JSON first if content type is JSON or if content looks like JSON
+                if (contentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true || 
+                    (contentType == null && trimmedContent.StartsWith("{") && trimmedContent.EndsWith("}")))
                 {
-                    var jsonDoc = JsonDocument.Parse(content);
-                    if (jsonDoc.RootElement.TryGetProperty("status", out var statusElement))
+                    try
                     {
-                        report.Status = statusElement.GetString() ?? "Unknown";
+                        var jsonDoc = JsonDocument.Parse(content);
+                        if (jsonDoc.RootElement.TryGetProperty("status", out var statusElement))
+                        {
+                            report.Status = statusElement.GetString() ?? "Unknown";
+                        }
+                        else if (jsonDoc.RootElement.TryGetProperty("Status", out var statusElementCapital))
+                        {
+                            report.Status = statusElementCapital.GetString() ?? "Unknown";
+                        }
+                        else if (response.IsSuccessStatusCode)
+                        {
+                            // No explicit status field, but successful response
+                            report.Status = "Healthy";
+                        }
+                        else
+                        {
+                            report.Status = "Unhealthy";
+                        }
                     }
-                    else if (jsonDoc.RootElement.TryGetProperty("Status", out var statusElementCapital))
+                    catch (JsonException)
                     {
-                        report.Status = statusElementCapital.GetString() ?? "Unknown";
-                    }
-                    else if (response.IsSuccessStatusCode)
-                    {
-                        // No explicit status field, but successful response
-                        report.Status = "Healthy";
-                    }
-                    else
-                    {
-                        report.Status = "Unhealthy";
+                        // JSON parsing failed, try parsing as plain text
+                        report.Status = ParseTextStatus(trimmedContent, response.IsSuccessStatusCode);
                     }
                 }
-                catch (JsonException)
+                else
                 {
-                    // Not JSON, fallback to HTTP status code
-                    report.Status = response.IsSuccessStatusCode ? "Healthy" : "Unhealthy";
+                    // Parse as simple text response
+                    report.Status = ParseTextStatus(trimmedContent, response.IsSuccessStatusCode);
                 }
             }
             else
@@ -167,6 +180,28 @@ public class ApplicationHealthAggregator : IApplicationHealthAggregator
         return report;
     }
 
+    private static string ParseTextStatus(string textContent, bool isSuccessStatusCode)
+    {
+        // Parse simple text status: "Healthy", "Degraded", or "Unhealthy"
+        if (textContent.Equals("Healthy", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Healthy";
+        }
+        else if (textContent.Equals("Degraded", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Degraded";
+        }
+        else if (textContent.Equals("Unhealthy", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Unhealthy";
+        }
+        else
+        {
+            // If text doesn't match expected values, fallback to HTTP status code
+            return isSuccessStatusCode ? "Healthy" : "Unhealthy";
+        }
+    }
+
     private string AggregateStatus(MemberHealthReport[] members)
     {
         if (members.Length == 0)
@@ -187,13 +222,19 @@ public class ApplicationHealthAggregator : IApplicationHealthAggregator
             return "Degraded";
         }
 
-        // If at least one member is Healthy -> Healthy
-        if (members.Any(m => m.Status.Equals("Healthy", StringComparison.OrdinalIgnoreCase)))
+        // If any member is Unknown -> Unknown
+        if (members.Any(m => m.Status.Equals("Unknown", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Unknown";
+        }
+
+        // If all members are Healthy -> Healthy
+        if (members.All(m => m.Status.Equals("Healthy", StringComparison.OrdinalIgnoreCase)))
         {
             return "Healthy";
         }
 
-        // Otherwise -> Unknown
+        // Otherwise -> Unknown (shouldn't reach here in normal cases)
         return "Unknown";
     }
 }

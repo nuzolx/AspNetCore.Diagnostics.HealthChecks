@@ -146,8 +146,27 @@ internal sealed class HealthCheckReportCollector : IHealthCheckReportCollector, 
                 if (!response.IsSuccessStatusCode && response.Content.Headers.ContentType?.MediaType != "application/json")
                     return UIHealthReport.CreateFrom(new InvalidOperationException($"HTTP response is not in valid state ({response.StatusCode}) when trying to get report from {uri} configured with name {name}."));
 
-                return await response.Content.ReadFromJsonAsync<UIHealthReport>(_options).ConfigureAwait(false)
-                    ?? throw new InvalidOperationException($"{nameof(HttpContentJsonExtensions.ReadFromJsonAsync)} returned null");
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                
+                // Try to parse as JSON first if content type is JSON or if content looks like JSON
+                if (contentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true || 
+                    (contentType == null && content?.TrimStart().StartsWith("{") == true && content?.TrimEnd().EndsWith("}") == true))
+                {
+                    try
+                    {
+                        var jsonReport = JsonSerializer.Deserialize<UIHealthReport>(content, _options);
+                        if (jsonReport != null)
+                            return jsonReport;
+                    }
+                    catch (JsonException)
+                    {
+                        // If JSON parsing fails, try parsing as text
+                    }
+                }
+
+                // Parse as simple text response
+                return ParseTextHealthReport(content?.Trim());
             }
         }
         catch (Exception exception)
@@ -156,6 +175,51 @@ internal sealed class HealthCheckReportCollector : IHealthCheckReportCollector, 
 
             return UIHealthReport.CreateFrom(exception);
         }
+    }
+
+    private static UIHealthReport ParseTextHealthReport(string? textContent)
+    {
+        if (string.IsNullOrWhiteSpace(textContent))
+        {
+            return UIHealthReport.CreateFrom(new InvalidOperationException("Empty or null health check response"));
+        }
+
+        // Parse simple text status: "Healthy", "Degraded", or "Unhealthy"
+        UIHealthStatus status;
+        if (textContent.Equals("Healthy", StringComparison.OrdinalIgnoreCase))
+        {
+            status = UIHealthStatus.Healthy;
+        }
+        else if (textContent.Equals("Degraded", StringComparison.OrdinalIgnoreCase))
+        {
+            status = UIHealthStatus.Degraded;
+        }
+        else if (textContent.Equals("Unhealthy", StringComparison.OrdinalIgnoreCase))
+        {
+            status = UIHealthStatus.Unhealthy;
+        }
+        else
+        {
+            // If text doesn't match expected values, treat as unhealthy
+            return UIHealthReport.CreateFrom(new InvalidOperationException($"Unexpected health check response: {textContent}"));
+        }
+
+        // Create a simple health report with the parsed status and an entry indicating the source
+        var entries = new Dictionary<string, UIHealthReportEntry>
+        {
+            ["Text Response"] = new UIHealthReportEntry
+            {
+                Status = status,
+                Description = $"Health status from text response: {textContent}",
+                Duration = TimeSpan.Zero,
+                Data = new Dictionary<string, object>()
+            }
+        };
+
+        return new UIHealthReport(entries, TimeSpan.Zero)
+        {
+            Status = status
+        };
     }
 
     private Uri GetEndpointUri(HealthCheckConfiguration configuration)
