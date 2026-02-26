@@ -109,8 +109,14 @@ public class ApplicationHealthAggregator : IApplicationHealthAggregator
                 var contentType = response.Content.Headers.ContentType?.MediaType;
                 var trimmedContent = content.Trim();
                 
+                // Check for HTML response first - these are always unhealthy
+                if (IsHtmlResponse(contentType, trimmedContent))
+                {
+                    report.Status = "Unhealthy";
+                    _logger.LogWarning("Health check for {MemberName} returned HTML instead of health check response", name);
+                }
                 // Try to parse as JSON first if content type is JSON or if content looks like JSON
-                if (contentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true || 
+                else if (contentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true || 
                     (contentType == null && trimmedContent.StartsWith("{") && trimmedContent.EndsWith("}")))
                 {
                     try
@@ -180,6 +186,29 @@ public class ApplicationHealthAggregator : IApplicationHealthAggregator
         return report;
     }
 
+    private static bool IsHtmlResponse(string? contentType, string content)
+    {
+        // Check Content-Type header first
+        if (contentType?.Contains("text/html", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return true;
+        }
+
+        // Check response body for HTML markers (case-insensitive)
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        // Only check first 500 chars for performance
+        var contentToCheck = content.Length > 500 ? content.Substring(0, 500) : content;
+        var lowerContent = contentToCheck.ToLowerInvariant();
+
+        return lowerContent.Contains("<!doctype") ||
+               lowerContent.Contains("<html") ||
+               lowerContent.Contains("<body");
+    }
+
     private static string ParseTextStatus(string textContent, bool isSuccessStatusCode)
     {
         // Parse simple text status: "Healthy", "Degraded", or "Unhealthy"
@@ -197,8 +226,9 @@ public class ApplicationHealthAggregator : IApplicationHealthAggregator
         }
         else
         {
-            // If text doesn't match expected values, fallback to HTTP status code
-            return isSuccessStatusCode ? "Healthy" : "Unhealthy";
+            // Unrecognized content - mark as Unhealthy to be safe
+            // Only valid health check responses should be marked as Healthy
+            return "Unhealthy";
         }
     }
 
